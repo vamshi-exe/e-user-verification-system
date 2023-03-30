@@ -1,5 +1,5 @@
 import './App.css';
-import React,{ useState,useMemo, useRef } from 'react';
+import React,{ useState} from 'react';
 import CardDetails from './CardDetails';
 import Cards from "./Cards"
 
@@ -11,7 +11,7 @@ function App() {
   const handleUser = (user) =>{
     setSelectedUser(user)
   }
-
+  
   return (
     <div className="App">
       { selectedUser ? <CardDetails selectedUser={selectedUser} clearUser={setSelectedUser} /> : <Cards handleUser={handleUser}/> }
