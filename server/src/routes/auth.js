@@ -75,7 +75,7 @@ router.post('/verify-user',async (req,res)=>{
 // });
 
 // const client = new Twilio(process.env.accountSid, process.env.authToken);
-const client = new Twilio('AC1f4a33e93ebd6884cc06fbe660a4e741',"76bd8fa6ba19e0324669959d23c65270");
+const client = new Twilio('AC481d949e743e0915d506f90a90cece8d',"748bdff2beeb4d888b55fbdbdc0d33ce");
 
 const sendOTP = async (number) =>{
     console.log("sending sms to : ",number)
@@ -84,10 +84,11 @@ const sendOTP = async (number) =>{
     client.messages.create({
         body: `Your E-verification OTP is ${randomOtp}. OTP will expire in 5 minutes.`,
         // from: process.env.senderContact,
-        from: "+15747667525",
+        from: "+12054420456",
         to: "\+91"+number
     }).then(async (message) => {
         console.log("otp sent successfull with id : " , message.sid);
+        // console.log(statusCode)
         // Save the OTP in a database 
         const otp = new otpModel({
             contactNo:number,
@@ -158,11 +159,11 @@ router.post("/otp/verify",async (req,res)=>{
     // return if the otp is correct on not 
 
     const {otp,adhaarNumber} = req.body;
-    console.log(otp, " ",adhaarNumber)
+    console.log(otp,adhaarNumber)
 
     // once the frontend is readty check if the contact number is getting correctly
     const user = await userDetailsModel.find({
-        adhaarNumber:adhaarNumber
+        AdhaarNumber:adhaarNumber,
     });
 
     const contactNo = user[0]?.contactNo;
@@ -172,21 +173,28 @@ router.post("/otp/verify",async (req,res)=>{
     });
     
     const dbOtp = data[0]?.otp;
-    if(dbOtp === otp){
-        
+    console.log(dbOtp)
+    if(dbOtp === otp ){
+        console.log(`this otp from if block ${JSON.stringify(dbOtp)}  ${JSON.stringify(otp)}`)
         res.json({
             statusCode:200,
             data:user, // set this in frontend if unable to persist the previous adhar input
             messgae:"Otp verified"
         });
-
-    }else{
+    }
+    else{
+        console.log(`this otp from db ${JSON.stringify(dbOtp)}  ${(otp)}`)
         res.json({
             statusCode:401,
             message:"Invalid Otp"
         });
+
     }
 });
+
+
+
+
 
 
 router.post("/login",async (req,res)=>{
@@ -216,12 +224,13 @@ router.post("/login",async (req,res)=>{
     
     const OtpStatus = await sendOTP(user[0]?.contactNo);
     console.log(OtpStatus)
-    if(OtpStatus){
+    if(OtpStatus === 200){
         res.json({
             statusCode:200,
             message:"OTP sent successfully"
         })
     }else{
+        console.log(`this is otp status: ${OtpStatus}`)
         res.json({
             statusCode:401,
             message:"Failed to send otp"
