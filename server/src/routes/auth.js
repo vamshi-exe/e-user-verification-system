@@ -1,5 +1,9 @@
 import express from "express";
 import userDetailsModel from "../models/userDetails.js";
+
+// const bodyParser = require('body-parser');
+
+import bodyParser from "body-parser";
 import otpModel from "../models/otp.js";
 import Twilio from 'twilio';
 import dotenv from 'dotenv';
@@ -75,35 +79,61 @@ router.post('/verify-user',async (req,res)=>{
 // });
 
 // const client = new Twilio(process.env.accountSid, process.env.authToken);
-const client = new Twilio('AC481d949e743e0915d506f90a90cece8d',"748bdff2beeb4d888b55fbdbdc0d33ce");
-
-const sendOTP = async (number) =>{
-    console.log("sending sms to : ",number)
+const client = new Twilio('AC934c51de0468383fe8be51a48b0a37f6',"d88ba27aa83e380b605e00a633256eed");
+const sendOTP = async (number) => {
+    console.log("sending sms to : ", number)
     const randomOtp = Math.floor(100000 + Math.random() * 900000);
 
-    client.messages.create({
-        body: `Your E-verification OTP is ${randomOtp}. OTP will expire in 5 minutes.`,
-        // from: process.env.senderContact,
-        from: "+12054420456",
-        to: "\+91"+number
-    }).then(async (message) => {
-        console.log("otp sent successfull with id : " , message.sid);
-        // console.log(statusCode)
-        // Save the OTP in a database 
+    try {
+        const message = await client.messages.create({
+            body: `Your E-verification OTP is ${randomOtp}. OTP will expire in 5 minutes.`,
+            from: "+12015716037",
+            to: "\+91" + number
+        });
+
+        console.log("otp sent successfully with id : ", message.sid);
+
         const otp = new otpModel({
-            contactNo:number,
-            otp:randomOtp
+            contactNo: number,
+            otp: randomOtp
         });
 
         await otp.save();
         return true;
-
-    }).catch(error =>{
-        console.error(error)
+    } catch (error) {
+        console.error("Error sending OTP:", error);
         return false;
-    });
-        
+    }
 }
+
+
+// const sendOTP = async (number) =>{
+//     console.log("sending sms to : ",number)
+//     const randomOtp = Math.floor(100000 + Math.random() * 900000);
+
+//     client.messages.create({
+//         body: `Your E-verification OTP is ${randomOtp}. OTP will expire in 5 minutes.`,
+//         // from: process.env.senderContact,
+//         from: "+12015716037",
+//         to: "\+91"+number
+//     }).then(async (message) => {
+//         console.log("otp sent successfull with id : " , message.sid);
+//         // console.log(statusCode)
+//         // Save the OTP in a database 
+//         const otp = new otpModel({
+//             contactNo:number,
+//             otp:randomOtp
+//         });
+
+//         await otp.save();
+//         return true;
+
+//     }).catch(error =>{
+//         console.error(error)
+//         return false;
+//     });
+        
+// }
 
 
 router.post("/register",async (req,res)=>{
@@ -153,90 +183,180 @@ router.post("/register",async (req,res)=>{
     res.json({"status":201,"message":"User registered successfully"});
 });
 
+// router.use(bodyParser.json());
+router.post("/otp/verify", async (req, res) => {
+    // Return if the OTP is correct or not
+    const { otp, adhaarNumber } = req.body;
+    console.log("Request body:", req.body);
 
-
-router.post("/otp/verify",async (req,res)=>{
-    // return if the otp is correct on not 
-
-    const {otp,adhaarNumber} = req.body;
-    console.log(otp,adhaarNumber)
-
-    // once the frontend is readty check if the contact number is getting correctly
-    const user = await userDetailsModel.find({
-        AdhaarNumber:adhaarNumber,
+    // Fetch user based on Aadhar number
+    const user = await userDetailsModel.findOne({
+        adhaarNumber: adhaarNumber,
     });
 
-    const contactNo = user[0]?.contactNo;
+    const contactNo = user?.contactNo;
+    console.log("Contact number:", contactNo);
 
-    const data = await otpModel.find({
-        'contactNo':contactNo
+    // Fetch OTP data based on the contact number
+    const otpData = await otpModel.findOne({
+        contactNo: contactNo,
     });
     
-    const dbOtp = data[0]?.otp;
-    console.log(dbOtp)
-    if(dbOtp === otp ){
-        console.log(`this otp from if block ${JSON.stringify(dbOtp)}  ${JSON.stringify(otp)}`)
-        res.json({
-            statusCode:200,
-            data:user, // set this in frontend if unable to persist the previous adhar input
-            messgae:"Otp verified"
-        });
-    }
-    else{
-        console.log(`this otp from db ${JSON.stringify(dbOtp)}  ${(otp)}`)
-        res.json({
-            statusCode:401,
-            message:"Invalid Otp"
-        });
+    console.log("OTP data:", otpData);
 
+    if (otpData) {
+        const dbOtp = otpData.otp;
+        console.log("Database OTP:", dbOtp);
+
+        // Compare the provided OTP with the one in the database
+        if (dbOtp === otp) {
+            res.status(200).json({
+                statusCode: 200,
+                data: user,
+                message: "OTP verified",
+            });
+        } else {
+            console.log("Invalid OTP");
+            res.status(401).json({
+                statusCode: 401,
+                message: "Invalid OTP",
+            });
+        }
+    } else {
+        console.log("No OTP data found for the contact number:", contactNo);
+        res.status(401).json({
+            statusCode: 401,
+            message: "Invalid contact number or OTP data not found",
+        });
     }
 });
 
 
+// router.post("/otp/verify",async (req,res)=>{
+//     // return if the otp is correct on not 
 
+//     const {otp,adhaarNumber} = req.body;
+//     console.log(req.body)
 
+//     // once the frontend is readty check if the contact number is getting correctly
+//     const user = await userDetailsModel.find({
+//         AdhaarNumber:adhaarNumber,
+//     });
 
+//     const contactNo = user[0]?.contactNo;
+//     console.log(contactNo)
 
-router.post("/login",async (req,res)=>{
+//     const data = await otpModel.findOne({
+//         'contactNo':contactNo
+//     });
     
-    /*
+//     const dbOtp = data[0]?.otp;
+//     console.log(`dbOtp: ${dbOtp}`)
+//     console.log(`Otp: ${otp}`)
+//     if(dbOtp === otp ){
+//         console.log(`this otp from if block ${JSON.stringify(dbOtp)}  ${JSON.stringify(otp)}`)
+//         res.status(200).json({
+//             statusCode:200,
+//             data:user, // set this in frontend if unable to persist the previous adhar input
+//             messgae:"Otp verified"
+//         });
+//     }
+//     else{
+        
+//         console.log(`this otp from db ${JSON.stringify(dbOtp)}  ${(otp)}`)
+//         res.status(401).json({
+//             statusCode:401,
+//             message:"Invalid Otp"
+//         });
 
-    1) for login the user will give his/her adhar number
-    2) we will check if the user exists based on the adhar number
-    3) if it exixts then we can send the otp on the users mobile number 
-    4) if the user enters valid otp then we can login the user
+//     }
+// });
 
-    */
-    // store the users data in mongodb
 
-    const {adhaarNumber} = req.body;
+
+
+
+
+// router.post("/login",async (req,res)=>{
+    
+//     /*
+
+//     1) for login the user will give his/her adhar number
+//     2) we will check if the user exists based on the adhar number
+//     3) if it exixts then we can send the otp on the users mobile number 
+//     4) if the user enters valid otp then we can login the user
+
+//     */
+//     // store the users data in mongodb
+
+//     const {adhaarNumber} = req.body;
+//     const user = await userDetailsModel.find({
+//         adhaarNumber:adhaarNumber
+//     });
+
+
+//     if(!user){
+//         res.json({
+//             statusCode:401,
+//             message:"User not found"
+//         });
+//     }
+    
+//     const OtpStatus = await sendOTP(user[0]?.contactNo);
+//     console.log(OtpStatus)
+//     if(OtpStatus === 200){
+//         res.json({
+//             statusCode:200,
+//             message:"OTP sent successfully"
+//         })
+//     }else{
+//         console.log(`this is otp status: ${OtpStatus}`)
+//         res.json({
+//             statusCode:401,
+//             message:"Failed to send otp"
+//         });
+//     }
+// },
+// );
+router.post("/login", async (req, res) => {
+    const { adhaarNumber } = req.body;
     const user = await userDetailsModel.find({
-        adhaarNumber:adhaarNumber
+        adhaarNumber: adhaarNumber
     });
 
-
-    if(!user){
-        res.json({
-            statusCode:401,
-            message:"User not found"
+    if (!user) {
+        res.status(401).json({
+            statusCode: 401,
+            message: "User not found"
         });
     }
-    
-    const OtpStatus = await sendOTP(user[0]?.contactNo);
-    console.log(OtpStatus)
-    if(OtpStatus === 200){
-        res.json({
-            statusCode:200,
-            message:"OTP sent successfully"
-        })
-    }else{
-        console.log(`this is otp status: ${OtpStatus}`)
-        res.json({
-            statusCode:401,
-            message:"Failed to send otp"
+
+    try {
+        const OtpStatus = await sendOTP(user[0]?.contactNo);
+        console.log(OtpStatus);
+
+        if (OtpStatus === true) {
+            res.status(200).json({
+                statusCode: 200,
+                message: "OTP sent successfully"
+            });
+        } else {
+            console.log("Failed to send OTP");
+            res.status(401).json({
+                statusCode: 401,
+                message: "Failed to send OTP"
+            });
+        }
+    } catch (error) {
+        console.error("Error sending OTP:", error);
+        res.status(500).json({
+            statusCode: 500,
+            message: "Internal Server Error"
         });
     }
 });
+
+
 
 
 // router.get("/check",(req,res) => {

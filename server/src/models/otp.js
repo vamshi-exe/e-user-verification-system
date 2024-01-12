@@ -5,11 +5,11 @@ import mongoose from 'mongoose';
 
 const otpSchema = mongoose.Schema({
     contactNo:{
-        type:Number,
+        type:String,
         required:true
     },
     otp:{
-        type:Number,
+        type:String,
         required:true
     },
     createdAt:{
