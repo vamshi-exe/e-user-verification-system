@@ -11,6 +11,7 @@ const CardDetails = ({clearUser,selectedUser}) => {
     axios.post("http://localhost:5000/api/auth/verify-user",{
       adhaarNumber:selectedUser.adhaarNumber
     }).then((res)=>{
+      clearUser("");
       console.log(res);
       alert("User Verified successfully")
     }).catch((err)=>{

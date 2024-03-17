@@ -1,9 +1,6 @@
 import express from "express";
 import userDetailsModel from "../models/userDetails.js";
 
-// const bodyParser = require('body-parser');
-
-import bodyParser from "body-parser";
 import otpModel from "../models/otp.js";
 import Twilio from 'twilio';
 import dotenv from 'dotenv';
@@ -16,7 +13,7 @@ let UserData = new web3.eth.Contract(UserDataArtifact.abi,UserDataArtifact.netwo
 
 
 
-const GANACHE_ADDRESS = "0x495c38B96246024B750da376948936C4cBA09094"
+const GANACHE_ADDRESS = "0x10157065EffE466da72971451dD5d2465a6F2B92"
 
 const getData = async ()=>{
     // const todoList = await UserData.deployed();
@@ -33,6 +30,23 @@ const getData = async ()=>{
     });
     console.log('====================================');
 }
+
+router.get('/getData',async(req,res)=>{
+    const{adhaarNumber} = req.query;
+
+    try{
+        const data = await userDetailsModel.findOne({adhaarNumber});
+        if (!data) {
+            return res.status(404).json({ error: 'Data not found' });
+          }
+          res.json(data);
+
+    } catch(error){
+        console.error('Error:', error);
+        res.status(500).json({error:'Internal Server Error'});
+    }
+
+});
 
 router.post('/verify-user',async (req,res)=>{
     const {adhaarNumber} = req.body;
@@ -79,7 +93,7 @@ router.post('/verify-user',async (req,res)=>{
 // });
 
 // const client = new Twilio(process.env.accountSid, process.env.authToken);
-const client = new Twilio('AC934c51de0468383fe8be51a48b0a37f6',"d88ba27aa83e380b605e00a633256eed");
+const client = new Twilio('AC934c51de0468383fe8be51a48b0a37f6',"08ae925955422d1c2ddeef0673fc1838");
 const sendOTP = async (number) => {
     console.log("sending sms to : ", number)
     const randomOtp = Math.floor(100000 + Math.random() * 900000);
@@ -87,6 +101,7 @@ const sendOTP = async (number) => {
     try {
         const message = await client.messages.create({
             body: `Your E-verification OTP is ${randomOtp}. OTP will expire in 5 minutes.`,
+            // twilio phone number
             from: "+12015716037",
             to: "\+91" + number
         });
@@ -211,14 +226,14 @@ router.post("/otp/verify", async (req, res) => {
         // Compare the provided OTP with the one in the database
         if (dbOtp === otp) {
             res.status(200).json({
-                statusCode: 200,
+                // statusCode: 200,
                 data: user,
                 message: "OTP verified",
             });
         } else {
             console.log("Invalid OTP");
             res.status(401).json({
-                statusCode: 401,
+                // statusCode: 401,
                 message: "Invalid OTP",
             });
         }
