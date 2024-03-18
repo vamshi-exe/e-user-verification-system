@@ -30,6 +30,7 @@ function App() {
     
     socket?.on("user-scanned",(data)=>{
       setQrActive(false);
+      setUserData(data);
       console.log(data);
     });
   },[socket]);
@@ -44,10 +45,11 @@ function App() {
     )  
   }
 
+
   return (
     <div className="App">
       <h1>E - User Verification </h1>
-        {qrActive ? getQr() : (<UserDetails socket={socket} />)}
+        {qrActive ? getQr() : (<UserDetails userData={userData} />)}
     </div>
   );
 }

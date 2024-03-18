@@ -93,7 +93,7 @@ router.post('/verify-user',async (req,res)=>{
 // });
 
 // const client = new Twilio(process.env.accountSid, process.env.authToken);
-const client = new Twilio('AC934c51de0468383fe8be51a48b0a37f6',"08ae925955422d1c2ddeef0673fc1838");
+const client = new Twilio('AC934c51de0468383fe8be51a48b0a37f6',"1f9302d1088c694539d110e105af96d8");
 const sendOTP = async (number) => {
     console.log("sending sms to : ", number)
     const randomOtp = Math.floor(100000 + Math.random() * 900000);

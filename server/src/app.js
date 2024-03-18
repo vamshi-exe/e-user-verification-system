@@ -17,22 +17,24 @@ app.use(express.json());
 app.use(cors({origin:'*',credentials:true}));
 app.use(bodyParser.json({limit:"30mb",extended:true}));   //to set the limit of image upload
 app.use(bodyParser.urlencoded({limit:"30mb",extended:true}));
+app.use(bodyParser.json());
+
 
 // define routes
 app.use("/api/auth",registerRoutes);
 
 app.post('/api/verify-scan',async (req,res)=>{
-    const {id,adhaarnumber} = req;
-    if(!adhaarnumber || !id) return res.json({
+    const {id,adhaarnumber} = req.body;
+    if(!adhaarnumber || !id) return res.status(400).json({
         status:400,
         message:"Data not provided"
     })
 
     console.log("Id : ", id + " adhaar : ",adhaarnumber);
     // insted of geting the data from database get it from the blockchain
-    const user = await userDetailsModel.find({adhaarNumber:adharnumber});
+    const user = await userDetailsModel.find({adhaarNumber:adhaarnumber});
     io.to(id).emit('user-scanned',user[0]);
-    res.json({
+    res.status(200).json({
         status:200,
         message:"User Scanned Success"
     });
